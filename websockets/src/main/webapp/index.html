@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Room</title>
+    <link rel="stylesheet" type="text/css" href="chat.css">
+    <script type="text/javascript">
+    	var webSocket = new WebSocket('ws://' + window.document.location.host + '/meetings/ChatEndpoint');
+
+    	webSocket.onerror = function(event) {
+      		onError(event)
+    	};
+
+    	webSocket.onopen = function(event) {
+      		onOpen(event);
+    	};
+
+    	webSocket.onmessage = function(event) {
+      		onMessage(event)
+    	};
+
+    	function onMessage(event) {
+    		var eventData = event.data;
+    	    console.log(eventData);
+     		var messagesArea = document.getElementById('messages')
+      		messagesArea.innerHTML += eventData+'\n';
+      		messagesArea.scrollTop = messagesArea.scrollHeight;
+   		}
+
+    	function onOpen(event) {
+      		var name = getCookie("username");
+      		if(name!=''){
+      			document.getElementById('myName').value = name;
+      		}
+      		setName();
+      		setRoom();
+    	}
+
+    	function onError(event) {
+      		alert("An error has occurred. More info:\n"+event.data);
+    	}
+
+    	function send() {
+      		var message = document.getElementById('inputmessage').value;
+    	    console.log(message);
+      		webSocket.send(message);
+      		document.getElementById('inputmessage').value = "";
+      		return false;
+    	}
+
+    	function setRoom() {
+      		webSocket.send("/SETROOM"+"chat_room");
+      		document.getElementById('messages').innerHTML = "";
+      		return false;
+    	}
+
+    	function setName() {
+      		var myName = getName();
+      		webSocket.send("/SETNAME"+myName);
+      		if(myName!=''){
+      			setCookie("username", myName, 365);
+      		}
+      		return false;
+    	}
+
+    	function getName(){
+    		return document.getElementById('myName').value;
+    	}
+
+    	function setCookie(cname, cvalue, exdays) {
+   			var d = new Date();
+    		d.setTime(d.getTime() + (exdays*24*60*60*1000));
+    		var expires = "expires="+d.toGMTString();
+    		document.cookie = cname + "=" + cvalue + "; " + expires;
+		}
+
+		function getCookie(cname) {
+    		var name = cname + "=";
+    		var ca = document.cookie.split(';');
+    		for(var i=0; i<ca.length; i++) {
+        		var c = ca[i].trim();
+        		if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
+    		}
+   			return "";
+		}
+
+    	function clearRoom(){
+    		if(confirm("This will clear all chat history for this room.")){
+    	    	webSocket.send("/CLEARHISTORY");
+    		}
+    	}
+
+
+    </script>
+</head>
+<body>
+<div>
+    <b> Name: </b><input id="myName" type="text" value="John" onkeydown="if (event.keyCode == 13) { setName() }"/>
+    <input type="submit" value="Set Name" onclick="setName()"/>
+</div>
+<hr/>
+<div>
+    <b>Message: </b><input id="inputmessage" type="text" autofocus onkeydown="if (event.keyCode == 13) { send() }"
+                           style="width:25%"/>
+    <input type="submit" value="Send Message" onclick="send()"/><br/>
+    <textarea rows="30" name="messages" id="messages" readonly></textarea>
+
+    <input type="button" onClick="clearRoom();" value="Clear all room chat history"/>
+</div>
+</body>
+</html>
